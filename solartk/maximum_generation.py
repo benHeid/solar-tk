@@ -8,10 +8,10 @@ import sys
 import pytz
 from tzwhere import tzwhere
 
-from irradiance import get_clearsky_irradiance
-from weather import get_temperature_cloudcover
-from sunpos import get_sun_position
-from helpers import granularity_to_freq
+from solartk.irradiance import get_clearsky_irradiance
+#from weather import get_temperature_cloudcover
+from solartk.sunpos import get_sun_position
+from solartk.helpers import granularity_to_freq
 
 
 # maximum generation potential class that provides a function to find the maximum generation 
@@ -64,7 +64,7 @@ class GenerationPotential:
 
     # a function to compute maximum generation potential for the given system at time t
     # clearsky method and method for computing sun position are optional arguments
-    def maximum_generation(self, start_time=None, end_time=None, granularity=60):
+    def maximum_generation(self, start_time=None, end_time=None, granularity=60, temperature=None):
 
         # if time is not defined or defined as something other than datetime object, raise an error
         if (start_time == None or end_time == None or isinstance(start_time, datetime.datetime) == False or isinstance(end_time, datetime.datetime) == False):
@@ -108,8 +108,7 @@ class GenerationPotential:
         max_generation = clearsky_irradiance[['time', 'max_power']]
         max_generation.columns = ['#time', 'max_generation']
 
-        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-            max_generation.to_csv(sys.stdout, index=False, header='False')
+        return max_generation
 
 
 if __name__ == "__main__":

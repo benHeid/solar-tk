@@ -4,10 +4,9 @@ import pytz
 import pandas as pd
 import requests
 import os 
-import googlemaps
 import numpy as np
 
-from helpers import granularity_to_freq
+from solartk.helpers import granularity_to_freq
 
 from typing import List, Dict, Tuple
 
@@ -34,8 +33,8 @@ def get_clearsky_irradiance(start_time: datetime.datetime = None, end_time: date
         ################################################################################## 
 
         # localizing the datetime based on the timezone
-        start: datetime.datetime = timezone.localize(start_time)
-        end: datetime.datetime = timezone.localize(end_time)
+        start: datetime.datetime = start_time.tz_localize("UTC").to_pydatetime()
+        end: datetime.datetime = end_time.tz_localize("UTC").to_pydatetime()
 
         # create arrays to store time and irradiance
         clearsky: List[int] = []
@@ -51,14 +50,14 @@ def get_clearsky_irradiance(start_time: datetime.datetime = None, end_time: date
             clear_sky: float = pysolar.solar.radiation.get_radiation_direct(start, altitude_deg)
 
             # removing the timezone information
-            dt: datetime.datetime = start.replace(tzinfo=pytz.utc).replace(tzinfo=None)
+            dt: datetime.datetime = start
 
             # saving the data in the lists
             clearsky.append(clear_sky)
             time_.append(dt)
             
             # increasing the time by 1 hrs, normazlizing it to handle DST
-            start = timezone.normalize(start + datetime.timedelta(seconds = granularity))
+            start = start + datetime.timedelta(seconds = granularity)
 
         # create dataframe from lists
         irradiance: pd.DataFrame = pd.DataFrame({'time':time_,'clearsky':clearsky})

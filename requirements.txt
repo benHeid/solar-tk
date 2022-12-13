@@ -5,6 +5,3 @@ tzwhere
 pysolar
 darksky
 pytz 
-json
-urllib
-yaml

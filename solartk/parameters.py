@@ -7,9 +7,9 @@ import numpy as np
 import math
 from sklearn import metrics
 
-from irradiance import get_clearsky_irradiance
-from weather import get_temperature_cloudcover
-from sunpos import get_sun_position
+from solartk.irradiance import get_clearsky_irradiance
+#from solartk.weather import get_temperature_cloudcover
+from solartk.sunpos import get_sun_position
 
 
 #debug code 
@@ -20,14 +20,16 @@ import matplotlib.pyplot as plt
 class ParameterModeling:
     
     # a constructor to initialize the values of latitude, logitude, and the file name
-    def __init__(self, latitude=None, longitude=None, data_file=None):  
+    def __init__(self, latitude=None, longitude=None, data:pd.DataFrame=None, key="solar"):
 
         # set default data sources for clearsky, sun position and temperature
         self.clearsky_estimation_method = 'lau_model'
         self.sun_position_source = 'psa'
         self.temperature_source = 'darksky'
-        self.google_api_key = ' '
-        self.darksky_api_key = ' '
+        self.google_api_key = None
+        self.darksky_api_key = None
+        self.data = data
+        self.key = key
 
         if (latitude == None):
             raise ValueError('please specify the latitude value.')
@@ -39,17 +41,15 @@ class ParameterModeling:
         else:
             self.lon_ = float(longitude)
 
-        try: 
-            self.data = pd.read_csv(data_file)
-            self.data['time'] = pd.to_datetime(self.data['time'])
-            self.data = self.data.sort_values(by=['time'], ascending=True).reset_index(drop=True)
+        try:
+            self.data = self.data.sort_values(by=[data.index.name], ascending=True).resample("15min").mean().fillna(0)
 
             # extract the start and end times from the data
-            self.start_time = self.data.iloc[0][0]
-            self.end_time = self.data.iloc[-1][0]
+            self.end_time = self.data.index[-1]
+            self.start_time = self.data.index[0]
 
             # get the resolution of the data as number of seconds between two consecutive timestamps
-            self.granularity = (self.data.iloc[1][0] - self.data.iloc[0][0]).seconds
+            self.granularity = (self.data.index[1] - self.data.index[0]).seconds
 
             #calculate the timezone of the given latitude and longitude
             tz = tzwhere.tzwhere()
@@ -61,59 +61,56 @@ class ParameterModeling:
             raise
 
     def upperlimit_violation_count(self, x):
-        return len(x[x['max'] < x['solar']])
+        return len(x[x['max'] < x[self.key]])
     
     def root_mean_squared_error(self, prediction, accurate):
         return np.sqrt(metrics.mean_squared_error(accurate, prediction))
 
-    def get_onetime_data(self):
+    def get_onetime_data(self, temperature):
 
         # get sun position
         sun_position = get_sun_position(
-                            start_time=self.start_time.replace(tzinfo=self.timezone).astimezone(pytz.timezone('UTC')), 
-                            end_time=self.end_time.replace(tzinfo=self.timezone).astimezone(pytz.timezone('UTC')), 
+                            start_time=self.start_time,
+                            end_time=self.end_time,
                             granularity=self.granularity, latitude=self.lat_, longitude=self.lon_)
 
-        self.data['sun_azimuth'] = sun_position['sun_azimuth']
-        self.data['sun_zenith'] = sun_position['sun_zenith']
+        sun_position = sun_position.set_index("time")
+        self.data['sun_azimuth'] = sun_position['sun_azimuth'].values
+        self.data['sun_zenith'] = sun_position['sun_zenith'].values
 
         # get clearsky using the defined clearsky method
         clearsky_irradiance = get_clearsky_irradiance(
                                 start_time=self.start_time, end_time=self.end_time, timezone=self.timezone, 
                                 granularity=self.granularity, latitude=self.lat_, longitude=self.lon_, 
                                 clearsky_estimation_method=self.clearsky_estimation_method, sun_zenith=self.data['sun_zenith'], google_api_key=self.google_api_key)
-
-        self.data['clearsky'] = clearsky_irradiance['clearsky']
-        
+        clearsky_irradiance  = clearsky_irradiance.set_index("time")
+        self.data['clearsky'] = clearsky_irradiance['clearsky'].values
         # get ambient air temperature
-        t_ambient = get_temperature_cloudcover(start_time=self.start_time, 
-                        end_time=self.end_time, granularity=self.granularity, latitude=self.lat_, 
-                        longitude=self.lon_, source=self.temperature_source, timezone=self.timezone, darksky_api_key=self.darksky_api_key)
+
 
         # get ambient temperature 
-        filtered = self.data.join(t_ambient.set_index('time'), on='time')
-        self.data['temperature'] = filtered['temperature']
+        self.data['temperature'] = temperature.values
 
     def preprocess_data(self):
 
         # print(self.data)
         
         # remove all the times when solar power is zero
-        self.data = self.data[self.data.solar > 0]
+        self.data = self.data[self.data[self.key] > 0]
 
         # get the date from the 
-        self.data['date'] = self.data['time'].dt.date
+        self.data['date'] = self.data.index.date
 
         # print(self.data)
         
         # delete the first and last hours of the day
-        self.data = self.data.groupby('date', as_index=False).apply(lambda group: group.iloc[2:]).reset_index()
-        self.data = self.data.drop(['level_0', 'level_1'], axis = 1)
-        self.data = self.data.groupby('date', as_index=False).apply(lambda group: group.iloc[:-2]).reset_index()
-        self.data = self.data.drop(['level_0', 'level_1'], axis = 1)
-        
+        self.data = self.data.groupby('date', as_index=False).apply(lambda group: group.iloc[8:]).reset_index()
+        self.data = self.data.drop(['level_0'], axis = 1)
+        self.data = self.data.groupby('date', as_index=False).apply(lambda group: group.iloc[:-8]).reset_index()
+        self.data = self.data.drop(['level_0', "level_1"], axis = 1)
+        self.data = self.data.set_index("UTC Time_New")
         # convert kw to watts
-        self.data['solar'] = 1000*self.data['solar']
+        self.data[self.key] = 1000*self.data[self.key]
 
         ### debug comment: keeping date column for later use ###
         # drop the date_only column
@@ -199,8 +196,11 @@ class ParameterModeling:
             self.data['max'] = self.data['clearsky'] * k_ * (
                 np.cos(math.radians(90)-pd.to_numeric(self.data['sun_zenith']))
                 *np.sin(tilt_)
-                *np.cos(pd.to_numeric(self.data['sun_azimuth'])-ori_) 
+
+                *np.cos(pd.to_numeric(ori_ - self.data['sun_azimuth']))
+
                 +np.sin(math.radians(90)-pd.to_numeric(self.data['sun_zenith']))
+
                 *np.cos(tilt_))
 
             # count how many times upperlimit has been violated for each day
@@ -269,7 +269,7 @@ class ParameterModeling:
         
         # debug code
         plt.plot([i for i in range(len(self.data))], self.data['max'], label='Max Solar ({})'.format(k_list[index_min_rmse]))
-        plt.plot([i for i in range(len(self.data))], self.data['solar'], label='Solar')
+        plt.plot([i for i in range(len(self.data))], self.data[self.key], label='Solar')
         plt.legend()
         plt.title('Graph with K')
         plt.show()  

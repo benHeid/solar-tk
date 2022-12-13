@@ -9,9 +9,9 @@ import pytz
 from tzwhere import tzwhere
 import csv
 
-from irradiance import get_clearsky_irradiance
-from weather import get_temperature_cloudcover
-from sunpos import get_sun_position
+#from irradiance import get_clearsky_irradiance
+#from solartk.weather import get_temperature_cloudcover
+from solartk.sunpos import get_sun_position
 
 # weather adjusted generation potential class that provides a function to compute
 # weather adjusted generation
@@ -41,7 +41,7 @@ class WeatherAdjustedGeneration:
 
     # a function to compute maximum generation potential for the given system at time t
     # clearsky method and method for computing sun position are optional arguments
-    def adjusted_weather_generation(self, max_generation=None):
+    def adjusted_weather_generation(self,  temp_cloudcover, max_generation=None,):
 
         # extract the start and end times from the data
         start_time = max_generation.iloc[0][0]
@@ -49,13 +49,6 @@ class WeatherAdjustedGeneration:
 
         # get the resolution of the data as number of seconds between two consecutive timestamps
         granularity = (max_generation.iloc[1][0] - max_generation.iloc[0][0]).seconds
-
-        # get weather data
-        temp_cloudcover = get_temperature_cloudcover(start_time=start_time, 
-                            end_time=end_time, granularity=granularity, latitude=self.lat_, 
-                            longitude=self.lon_, source=self.weather_source)
-
-        # print(temp_cloudcover)
 
         # combined with max_generation data
         adjusted_generation = max_generation.join(temp_cloudcover.set_index('time'), on='time')

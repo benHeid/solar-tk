@@ -1,34 +1,40 @@
 import datetime
 import pandas as pd 
-from helpers import granularity_to_freq
+from solartk.helpers import granularity_to_freq
 import time
 import numpy as np 
-
+from tzwhere import tzwhere
 rad = np.pi/180
 dEarthMeanRadius = 6371.01
 dAstronomicalUnit = 149597890
 
+from pysolar.solar import get_azimuth, get_altitude
+
 def get_sun_position(start_time=None, end_time=None, granularity=None, latitude=None, longitude=None, sun_position_method='psa'):
 
     if (sun_position_method=='psa'):
-
+        tz = tzwhere.tzwhere()
+        timezone_str = tz.tzNameAt(latitude, longitude)
         # create a pandas datetimeindex 
-        df = pd.date_range(start_time, end_time, freq=granularity_to_freq(granularity))
-
+        df = pd.date_range(start_time, end_time, freq=granularity_to_freq(granularity), tz="UTC")
+        df = df.tz_convert(timezone_str)
         # convert it into a simple dataframe and rename the column
         df = df.to_frame(index=False)
         df.columns = ['time']
+        #df["sun_zenith"] = df["time"].apply(lambda x: 90 - get_altitude(latitude, longitude, x.to_pydatetime()))
+        #df["sun_azimuth"] = df["time"].apply(lambda x: get_azimuth(latitude, longitude, x.to_pydatetime()))
+
 
         # call sunpos function for each time to get sun azimuth and zenith angles
         df[['sun_azimuth', 'sun_zenith']] = df['time'].apply(lambda x: sunpos(x, latitude, longitude))
-        
+        #df[['sun_azimuth', 'sun_zenith']]
         return df
 
-    else: 
+    else:
         raise ValueError('Invalid argument for sun_position_method variable.')
 
 def sunpos(udtTime, latitude, longitude):
-        # Calculate difference in days between the current Julian Day 
+        # Calculate difference in days between the current Julian Day
         # and JD 2451545.0, which is noon 1 January 2000 Universal Time
 
         # Calculate time of the day in UT decimal hours
