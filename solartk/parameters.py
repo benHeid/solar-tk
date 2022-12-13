@@ -188,19 +188,16 @@ class ParameterModeling:
         #debug code
         # print(tilt_, ori_)
 
-        for k_ in range(0, 1000, 1):
+        for k_ in range(0, 1000, 10):
             
-            k_ = k_/10
+            k_ = k_
 
             # compute maximum power generation for the given parameters
             self.data['max'] = self.data['clearsky'] * k_ * (
                 np.cos(math.radians(90)-pd.to_numeric(self.data['sun_zenith']))
                 *np.sin(tilt_)
-
                 *np.cos(pd.to_numeric(ori_ - self.data['sun_azimuth']))
-
                 +np.sin(math.radians(90)-pd.to_numeric(self.data['sun_zenith']))
-
                 *np.cos(tilt_))
 
             # count how many times upperlimit has been violated for each day
@@ -237,7 +234,7 @@ class ParameterModeling:
                 # print(k_, np.inf, any(count))
             else: 
                 k_list.append(k_)
-                rmse_list.append(self.root_mean_squared_error(self.data['max'], self.data['solar']))
+                rmse_list.append(self.root_mean_squared_error(self.data['max'], self.data[self.key]))
                 # print(k_, self.root_mean_squared_error(self.data['max'], self.data['solar']))
 
             # if k_ > 10:
@@ -296,7 +293,7 @@ class ParameterModeling:
                 *np.cos(tilt_))
 
             # count the times when max is less than solar
-            count = len(self.data[self.data['max'] < self.data['solar']])
+            count = len(self.data[self.data['max'] < self.data[self.key]])
 
             ##########################################################################
             # debug code
@@ -310,13 +307,13 @@ class ParameterModeling:
             # check if count > tolerance
             if iter_ < 1: 
                 ori_list.append(ori_)
-                rmse_ = np.sqrt(metrics.mean_squared_error(self.data['solar'], self.data['max']))
+                rmse_ = np.sqrt(metrics.mean_squared_error(self.data[self.key], self.data['max']))
                 rmse_list.append(rmse_)
                 ori_flag = True
             else: 
                 if count <= ori_tolerance:
                     ori_list.append(ori_)
-                    rmse_ = np.sqrt(metrics.mean_squared_error(self.data['solar'], self.data['max']))
+                    rmse_ = np.sqrt(metrics.mean_squared_error(self.data[self.key], self.data['max']))
                     rmse_list.append(rmse_)
                     ori_flag = True
                     ### debug code 
@@ -372,18 +369,18 @@ class ParameterModeling:
                 *np.cos(tilt_))
 
             # count the times when max is less than solar
-            count = len(self.data[self.data['max'] < self.data['solar']])
+            count = len(self.data[self.data['max'] < self.data[self.key]])
 
             # check if count > tolerance
             if iter_ < 1:
                 tilt_list.append(tilt_)
-                rmse_ = np.sqrt(metrics.mean_squared_error(self.data['solar'], self.data['max']))
+                rmse_ = np.sqrt(metrics.mean_squared_error(self.data[self.key], self.data['max']))
                 rmse_list.append(rmse_)
                 tilt_flag = True
             else:
                 if count <= tilt_tolerance:
                     tilt_list.append(tilt_)
-                    rmse_ = np.sqrt(metrics.mean_squared_error(self.data['solar'], self.data['max']))
+                    rmse_ = np.sqrt(metrics.mean_squared_error(self.data[self.key], self.data['max']))
                     rmse_list.append(rmse_)
                     tilt_flag = True
                 else: 
