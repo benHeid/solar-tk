@@ -79,7 +79,7 @@ class GenerationPotential:
         clearsky_irradiance = get_clearsky_irradiance(
                                 start_time=start_time, end_time=end_time, timezone=timezone, 
                                 granularity=granularity, latitude=self.lat_, longitude=self.lon_, 
-                                clearsky_source=self.clearsky_source)
+                                )
         
         # get sun position
         sun_position = get_sun_position(
@@ -88,16 +88,14 @@ class GenerationPotential:
                             granularity=granularity, latitude=self.lat_, longitude=self.lon_)
 
         # # get ambient air temperature
-        t_ambient = get_temperature_cloudcover(start_time=start_time, 
-                        end_time=end_time, granularity=granularity, latitude=self.lat_, 
-                        longitude=self.lon_, source='weather_underground', timezone=timezone)
+        t_ambient = temperature
 
         # get ambient temperature 
-        t_ambient = clearsky_irradiance.join(t_ambient.set_index('time'), on='time')
+        t_ambient = clearsky_irradiance.join(t_ambient.set_index(t_ambient.index.tz_localize("UTC").rename("time")), on='time')
 
         # compute maximum power generation, reusing clearsky dataframe to get time as well
         clearsky_irradiance['max_power'] = clearsky_irradiance['clearsky'] * self.k * (
-            1 + self.c*(self.t_baseline - t_ambient['temperature']))*(
+            1 + self.c*(self.t_baseline - t_ambient['temperature_forecast']))*(
             np.cos(math.radians(90)-pd.to_numeric(sun_position['sun_zenith']))
             *np.sin(self.tilt_)
             *np.cos(pd.to_numeric(sun_position['sun_azimuth'])-self.ore_) 

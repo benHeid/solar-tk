@@ -3,16 +3,23 @@ import pysolar
 import pytz
 import pandas as pd
 import requests
-import os 
+import os
 import numpy as np
 
 from solartk.helpers import granularity_to_freq
 
 from typing import List, Dict, Tuple
 
-def get_clearsky_irradiance(start_time: datetime.datetime = None, end_time: datetime.datetime = None, timezone: pytz.timezone = None, 
-                latitude: float = None, longitude: float = None, sun_zenith: pd.DataFrame = None, 
-                granularity: int = 60, clearsky_estimation_method: str = 'pysolar', 
+
+
+import pvlib
+from pvlib import clearsky, atmosphere, solarposition
+from pvlib.location import Location
+from pvlib.iotools import read_tmy3
+
+def get_clearsky_irradiance(start_time: datetime.datetime = None, end_time: datetime.datetime = None, timezone: pytz.timezone = None,
+                latitude: float = None, longitude: float = None, sun_zenith: pd.DataFrame = None,
+                granularity: int = 60, clearsky_estimation_method: str = 'pysolar',
                 google_api_key: str = None):
 
 
@@ -32,35 +39,19 @@ def get_clearsky_irradiance(start_time: datetime.datetime = None, end_time: date
         # data['time'] = data['time'].apply(lambda x: x.replace(tzinfo=pytz.utc).replace(tzinfo=None))  
         ################################################################################## 
 
-        # localizing the datetime based on the timezone
-        start: datetime.datetime = start_time.tz_localize("UTC").to_pydatetime()
-        end: datetime.datetime = end_time.tz_localize("UTC").to_pydatetime()
+        time = pd.DatetimeIndex(pd.date_range(start_time- 0* pd.Timedelta(hours=1), end_time- 0* pd.Timedelta(hours=1), freq=pd.Timedelta(seconds=granularity)), tz="UTC")
+        solpos = pvlib.solarposition.get_solarposition(time, latitude, longitude)
+        apparent_zenith = solpos['apparent_zenith']
+        airmass = pvlib.atmosphere.get_relative_airmass(apparent_zenith)
+        pressure = pvlib.atmosphere.alt2pres(115)
+        airmass = pvlib.atmosphere.get_absolute_airmass(airmass, pressure)
+        linke_turbidity = pvlib.clearsky.lookup_linke_turbidity(time, latitude, longitude)
+        dni_extra = pvlib.irradiance.get_extra_radiation(time)
+        #linke_turbidity.mean()["dni"].values
 
-        # create arrays to store time and irradiance
-        clearsky: List[int] = []
-        time_: List[datetime.datetime] = []
-
-        # go through all the hours between the two dates
-        while start <= end:
-
-            # get the altitude degree for the given location
-            altitude_deg: float = pysolar.solar.get_altitude(latitude, longitude, start)
-
-            # get the clearsky based on the time and altitude
-            clear_sky: float = pysolar.solar.radiation.get_radiation_direct(start, altitude_deg)
-
-            # removing the timezone information
-            dt: datetime.datetime = start
-
-            # saving the data in the lists
-            clearsky.append(clear_sky)
-            time_.append(dt)
-            
-            # increasing the time by 1 hrs, normazlizing it to handle DST
-            start = start + datetime.timedelta(seconds = granularity)
-
-        # create dataframe from lists
-        irradiance: pd.DataFrame = pd.DataFrame({'time':time_,'clearsky':clearsky})
+        loc = Location(latitude, longitude)
+        c_sky =  clearsky.ineichen(apparent_zenith, airmass, linke_turbidity.mean(), 115, dni_extra)["dni"].values
+        irradiance = pd.DataFrame({'time': time, 'clearsky': c_sky})
 
     elif (clearsky_estimation_method == 'lau_model' and google_api_key!=None):
 
@@ -84,10 +75,9 @@ def get_clearsky_irradiance(start_time: datetime.datetime = None, end_time: date
         irradiance['clearsky'] = irradiance['clearsky'].fillna(0)
         irradiance = irradiance[['time', 'clearsky']]
 
-    else: 
+    else:
         raise ValueError('Invalid argument for clearsky_estimation_method or google_api_key.')
 
     return irradiance
 
-    
-    
+

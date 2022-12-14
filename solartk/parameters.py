@@ -42,7 +42,7 @@ class ParameterModeling:
             self.lon_ = float(longitude)
 
         try:
-            self.data = self.data.sort_values(by=[data.index.name], ascending=True).resample("15min").mean().fillna(0)
+            self.data = self.data.sort_values(by=[data.index.name], ascending=True)
 
             # extract the start and end times from the data
             self.end_time = self.data.index[-1]
@@ -74,14 +74,14 @@ class ParameterModeling:
                             end_time=self.end_time,
                             granularity=self.granularity, latitude=self.lat_, longitude=self.lon_)
 
-        sun_position = sun_position.set_index("time")
+        #sun_position = sun_position.set_index("time")
         self.data['sun_azimuth'] = sun_position['sun_azimuth'].values
         self.data['sun_zenith'] = sun_position['sun_zenith'].values
 
         # get clearsky using the defined clearsky method
         clearsky_irradiance = get_clearsky_irradiance(
-                                start_time=self.start_time, end_time=self.end_time, timezone=self.timezone, 
-                                granularity=self.granularity, latitude=self.lat_, longitude=self.lon_, 
+                                start_time=self.start_time, end_time=self.end_time, timezone=self.timezone,
+                                granularity=self.granularity, latitude=self.lat_, longitude=self.lon_,
                                 clearsky_estimation_method=self.clearsky_estimation_method, sun_zenith=self.data['sun_zenith'], google_api_key=self.google_api_key)
         clearsky_irradiance  = clearsky_irradiance.set_index("time")
         self.data['clearsky'] = clearsky_irradiance['clearsky'].values
@@ -104,9 +104,9 @@ class ParameterModeling:
         # print(self.data)
         
         # delete the first and last hours of the day
-        self.data = self.data.groupby('date', as_index=False).apply(lambda group: group.iloc[8:]).reset_index()
+        self.data = self.data.groupby('date', as_index=False).apply(lambda group: group.iloc[2:]).reset_index()
         self.data = self.data.drop(['level_0'], axis = 1)
-        self.data = self.data.groupby('date', as_index=False).apply(lambda group: group.iloc[:-8]).reset_index()
+        self.data = self.data.groupby('date', as_index=False).apply(lambda group: group.iloc[:-2]).reset_index()
         self.data = self.data.drop(['level_0', "level_1"], axis = 1)
         self.data = self.data.set_index("UTC Time_New")
         # convert kw to watts
@@ -181,14 +181,14 @@ class ParameterModeling:
         # initialize some variables
         k_ = 0
         k_tolerance = 2
-        
+
         rmse_list = []
         k_list = []
 
         #debug code
         # print(tilt_, ori_)
 
-        for k_ in range(0, 1000, 10):
+        for k_ in range(0, 101, 10):
             
             k_ = k_
 
@@ -246,11 +246,12 @@ class ParameterModeling:
         # print(self.data['max'])
         
         # if we could find the parameters
-        if any(rmse_list) != np.inf:      
+        if any(np.array(rmse_list) != np.inf):
             minimum_rmse = min(rmse_list)
             index_min_rmse = rmse_list.index(minimum_rmse)
         else:
-            return 100
+            index_min_rmse = -1
+            #eturn 100
 
 
         ##########################################################################

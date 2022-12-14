@@ -51,19 +51,17 @@ class WeatherAdjustedGeneration:
         granularity = (max_generation.iloc[1][0] - max_generation.iloc[0][0]).seconds
 
         # combined with max_generation data
-        adjusted_generation = max_generation.join(temp_cloudcover.set_index('time'), on='time')
+        adjusted_generation = max_generation.join(temp_cloudcover.set_index(temp_cloudcover.index.tz_localize("UTC").rename("time")), on='#time')
 
         # apply weather effect
-        adjusted_generation['weather_effect'] = (0.985 - 0.984 * ((adjusted_generation['clouds']/100) ** 3.4))
+        adjusted_generation['weather_effect'] = (0.985 - 0.984 * ((adjusted_generation['tcc']/100) ** 3.4))
         adjusted_generation['adjusted_generation'] = adjusted_generation['weather_effect']*pd.to_numeric(adjusted_generation['max_generation'])
 
         # just keep the time and adjusted_generation columns
-        adjusted_generation = adjusted_generation[['time', 'adjusted_generation']]
+        adjusted_generation = adjusted_generation[['#time', 'adjusted_generation']]
         adjusted_generation.columns = ['#time', 'adjusted_generation']
 
-        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-            adjusted_generation.to_csv(sys.stdout, index=False, header='False')
-
+        return  adjusted_generation["adjusted_generation"].values
 
 if __name__ == "__main__":
 
