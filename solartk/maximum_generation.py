@@ -24,7 +24,7 @@ class GenerationPotential:
         if (k == None or k <= 0):
             raise ValueError('please specify the k value, where k > 0.')
         else:
-            self.k = k * 0.20 # convert back to k at 20% efficiency
+            self.k = k # * 0.20 # convert back to k at 20% efficiency
 
         if (tilt == None or tilt < 0):
             raise ValueError('please specify the tilt value, where tilt => 0.')
@@ -83,8 +83,8 @@ class GenerationPotential:
         
         # get sun position
         sun_position = get_sun_position(
-                            start_time= start_time.replace(tzinfo=timezone).astimezone(pytz.timezone('UTC')), 
-                            end_time=end_time.replace(tzinfo=timezone).astimezone(pytz.timezone('UTC')), 
+                            start_time= start_time,
+                            end_time=end_time,
                             granularity=granularity, latitude=self.lat_, longitude=self.lon_)
 
         # # get ambient air temperature

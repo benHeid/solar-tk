@@ -104,9 +104,9 @@ class ParameterModeling:
         # print(self.data)
         
         # delete the first and last hours of the day
-        self.data = self.data.groupby('date', as_index=False).apply(lambda group: group.iloc[2:]).reset_index()
+        self.data = self.data.groupby('date', as_index=False).apply(lambda group: group.iloc[3:]).reset_index()
         self.data = self.data.drop(['level_0'], axis = 1)
-        self.data = self.data.groupby('date', as_index=False).apply(lambda group: group.iloc[:-2]).reset_index()
+        self.data = self.data.groupby('date', as_index=False).apply(lambda group: group.iloc[:-3]).reset_index()
         self.data = self.data.drop(['level_0', "level_1"], axis = 1)
         self.data = self.data.set_index("UTC Time_New")
         # convert kw to watts
@@ -180,7 +180,7 @@ class ParameterModeling:
 
         # initialize some variables
         k_ = 0
-        k_tolerance = 2
+        k_tolerance = 8
 
         rmse_list = []
         k_list = []
@@ -188,7 +188,7 @@ class ParameterModeling:
         #debug code
         # print(tilt_, ori_)
 
-        for k_ in range(0, 101, 10):
+        for k_ in range(0, 401, 10):
             
             k_ = k_
 
@@ -401,7 +401,7 @@ class ParameterModeling:
         
         # to be implemented in the future release
         # return standard values for now
-        return 0, 0.005
+        return 16, 0.005
 
 if __name__ == "__main__":
 

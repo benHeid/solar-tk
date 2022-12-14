@@ -54,7 +54,7 @@ class WeatherAdjustedGeneration:
         adjusted_generation = max_generation.join(temp_cloudcover.set_index(temp_cloudcover.index.tz_localize("UTC").rename("time")), on='#time')
 
         # apply weather effect
-        adjusted_generation['weather_effect'] = (0.985 - 0.984 * ((adjusted_generation['tcc']/100) ** 3.4))
+        adjusted_generation['weather_effect'] = (0.985 - 0.984 * ((adjusted_generation['tcc']) ** 3.4))
         adjusted_generation['adjusted_generation'] = adjusted_generation['weather_effect']*pd.to_numeric(adjusted_generation['max_generation'])
 
         # just keep the time and adjusted_generation columns

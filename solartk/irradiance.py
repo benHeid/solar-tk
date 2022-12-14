@@ -50,7 +50,7 @@ def get_clearsky_irradiance(start_time: datetime.datetime = None, end_time: date
         #linke_turbidity.mean()["dni"].values
 
         loc = Location(latitude, longitude)
-        c_sky =  clearsky.ineichen(apparent_zenith, airmass, linke_turbidity.mean(), 115, dni_extra)["dni"].values
+        c_sky =  clearsky.ineichen(apparent_zenith, airmass, linke_turbidity.mean(), 115, dni_extra)["ghi"].values
         irradiance = pd.DataFrame({'time': time, 'clearsky': c_sky})
 
     elif (clearsky_estimation_method == 'lau_model' and google_api_key!=None):
