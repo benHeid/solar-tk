@@ -8,13 +8,11 @@ import math
 from sklearn import metrics
 
 from solartk.irradiance import get_clearsky_irradiance
-#from solartk.weather import get_temperature_cloudcover
+# from solartk.weather import get_temperature_cloudcover
 from solartk.sunpos import get_sun_position
 
-
-#debug code 
-import matplotlib.pyplot as plt 
-
+# debug code
+import matplotlib.pyplot as plt
 
 
 class ParameterModeling:
@@ -88,7 +86,7 @@ class ParameterModeling:
         # get ambient air temperature
 
 
-        # get ambient temperature 
+        # get ambient temperature
         self.data['temperature'] = temperature.values
 
     def preprocess_data(self):
@@ -118,6 +116,7 @@ class ParameterModeling:
 
     def find_parameters(self):
 
+        # debug
         # print(self.data)
 
         best_k = 100
@@ -141,7 +140,8 @@ class ParameterModeling:
                 +np.sin(math.radians(90)-pd.to_numeric(self.data['sun_zenith']))
                 *np.cos(best_tilt))
 
-            print(self.data)
+            # debug
+            # print(self.data)
 
             if run == 0:
                 add_k = 2
@@ -157,8 +157,10 @@ class ParameterModeling:
             best_tilt = self.find_tilt(best_k + add_k, best_ori, self.lat_, run)
             # best_tilt = np.deg2rad(50)
 
-            print(best_k, np.rad2deg(best_ori), np.rad2deg(best_tilt))
-            # debug code
+            ##########################################################################
+            # debug
+            #
+            # print(best_k, np.rad2deg(best_ori), np.rad2deg(best_tilt))
             # self.data['max'] = self.data['clearsky'] * best_k * (
             # 1 + 0.005*(25 - self.data['temperature'])) *(
             #     np.cos(math.radians(90)-pd.to_numeric(self.data['sun_zenith']))
@@ -166,13 +168,13 @@ class ParameterModeling:
             #     *np.cos(pd.to_numeric(self.data['sun_azimuth'])-best_ori) 
             #     +np.sin(math.radians(90)-pd.to_numeric(self.data['sun_zenith']))
             #     *np.cos(best_tilt))
-            
-            # # debug code
+            #
             # plt.plot([i for i in range(len(self.data))], self.data['max'], label='Max Solar ({})'.format(best_k))
             # plt.plot([i for i in range(len(self.data))], self.data['solar'], label='Solar')
             # plt.legend()
             # plt.title('Graph with K')
-            # plt.show()  
+            # plt.show()
+            ##########################################################################
 
         return best_k, math.degrees(best_tilt), math.degrees(best_ori)
  
@@ -185,7 +187,7 @@ class ParameterModeling:
         rmse_list = []
         k_list = []
 
-        #debug code
+        # debug code
         # print(tilt_, ori_)
 
         for k_ in range(0, 401, 10):
@@ -225,7 +227,6 @@ class ParameterModeling:
             # else:
             # if count <= k_tolerance:
 
-
             # (count > k_tolerance).any()
 
             if (count > k_tolerance).any():
@@ -240,7 +241,7 @@ class ParameterModeling:
             # if k_ > 10:
             #     break
 
-        ##### debug code
+        # debug code
         # k_flag = True
         # print(len(rmse_list))
         # print(self.data['max'])
@@ -251,26 +252,25 @@ class ParameterModeling:
             index_min_rmse = rmse_list.index(minimum_rmse)
         else:
             index_min_rmse = -1
-            #eturn 100
-
+            # return 100
 
         ##########################################################################
+        # debug code
+        #
         # print(k_list[index_min_rmse])
-
-        # debug code
-        self.data['max'] = self.data['clearsky'] * k_list[index_min_rmse] * (
-            np.cos(math.radians(90)-pd.to_numeric(self.data['sun_zenith']))
-            *np.sin(tilt_)
-            *np.cos(pd.to_numeric(self.data['sun_azimuth'])-ori_) 
-            +np.sin(math.radians(90)-pd.to_numeric(self.data['sun_zenith']))
-            *np.cos(tilt_))
-        
-        # debug code
-        plt.plot([i for i in range(len(self.data))], self.data['max'], label='Max Solar ({})'.format(k_list[index_min_rmse]))
-        plt.plot([i for i in range(len(self.data))], self.data[self.key], label='Solar')
-        plt.legend()
-        plt.title('Graph with K')
-        plt.show()  
+        #
+        # self.data['max'] = self.data['clearsky'] * k_list[index_min_rmse] * (
+        #         np.cos(math.radians(90) - pd.to_numeric(self.data['sun_zenith']))
+        #         * np.sin(tilt_)
+        #         * np.cos(pd.to_numeric(self.data['sun_azimuth']) - ori_)
+        #         + np.sin(math.radians(90) - pd.to_numeric(self.data['sun_zenith']))
+        #         * np.cos(tilt_))
+        #
+        # plt.plot([i for i in range(len(self.data))], self.data['max'], label='Max Solar ({})'.format(k_list[index_min_rmse]))
+        # plt.plot([i for i in range(len(self.data))], self.data[self.key], label='Solar')
+        # plt.legend()
+        # plt.title('Graph with K')
+        # plt.show()
         ##########################################################################
 
         return k_list[index_min_rmse]
@@ -317,12 +317,12 @@ class ParameterModeling:
                     rmse_ = np.sqrt(metrics.mean_squared_error(self.data[self.key], self.data['max']))
                     rmse_list.append(rmse_)
                     ori_flag = True
-                    ### debug code 
+                    # debug code
                     # print("Ori: ", ori_, ", RMSE: ", rmse_) 
                 else: 
                     ori_list.append(ori_)
                     rmse_list.append(np.inf)
-                    ### debug code 
+                    # debug code
                     # print("Ori: ", ori_, ", RMSE: ", np.inf) 
             
         # if we could find the parameters
@@ -333,17 +333,17 @@ class ParameterModeling:
             return math.radians(180)
 
         ##########################################################################
+        # debug code
+        #
         # print(k_list[index_min_rmse])
-
-        # # debug code
+        #
         # self.data['max'] = self.data['clearsky'] * k_ *(
         #     np.cos(math.radians(90)-pd.to_numeric(self.data['sun_zenith']))
         #     *np.sin(tilt_)
         #     *np.cos(pd.to_numeric(self.data['sun_azimuth'])-ori_list[index_min_rmse]) 
         #     +np.sin(math.radians(90)-pd.to_numeric(self.data['sun_zenith']))
         #     *np.cos(tilt_))
-        
-        # ## debug code
+        #
         # plt.plot([i for i in range(len(self.data))], self.data['max'], label='Max Solar (Ori)')
         # plt.plot([i for i in range(len(self.data))], self.data['solar'], label='Solar')
         # plt.show()  

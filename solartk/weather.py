@@ -19,7 +19,8 @@ def get_temperature_cloudcover(start_time=None, end_time=None,
         # create a pandas datetimeindex 
         df = pd.date_range(start_time - datetime.timedelta(days=1), end_time , freq='D')
 
-        print(df)
+        # debug code
+        # print(df)
 
         # convert it into a simple dataframe and rename the column
         df = df.to_frame(index=False)
@@ -80,6 +81,7 @@ def get_temperature_cloudcover(start_time=None, end_time=None,
         # temp_cloud_df['time'] = temp_cloud_df['time'].dt.tz_localize('utc').dt.tz_convert(timezone)
         temp_cloud_df['time'] = temp_cloud_df['time'].dt.tz_localize(None)
 
+        # debug code
         # print(temp_cloud_df)
 
     elif (source == 'darksky' and darksky_api_key != None):
